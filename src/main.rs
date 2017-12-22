@@ -8,7 +8,7 @@ use rand::{Rng, ThreadRng};
 
 const W: u32 = 512;
 const H: u32 = 512;
-const N: u32 = 256;
+const N: u32 = 64;
 const MAX_STEP: u32 = 10;
 const MAX_DISTANCE: f64 = 2.0;
 const EPSILON: f64 = 1e-6;
@@ -35,8 +35,8 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
 
 fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> f64 {
     let mut sum = 0.0;
-    for _ in 0..N {
-        let a: f64 = rng.gen_range(0.0, 2.0 * PI);
+    for i in 0..N {
+        let a = 2.0 * PI * i as f64 / N as f64;
         sum += trace(x, y, a.cos(), a.sin());
     }
     sum / N as f64
