@@ -13,6 +13,18 @@ const MAX_STEP: u32 = 10;
 const MAX_DISTANCE: f64 = 2.0;
 const EPSILON: f64 = 1e-6;
 
+struct Res {
+    sd: f64,
+    emissive: f64,
+}
+
+fn scene(x: f64, y: f64) -> Res {
+    Res {
+        sd: circle_sdf(x, y, 0.5, 0.5, 0.1),
+        emissive: 2.0,
+    }
+}
+
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
     let ux = x - cx;
     let uy = y - cy;
@@ -23,12 +35,12 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
     let mut t = 0.0;
     let mut i = 0;
     while i < MAX_STEP && t < MAX_DISTANCE {
-        let sd = circle_sdf(ox + dx * t, oy + dy * t, 0.5, 0.5, 0.1);
-        if sd < EPSILON {
-            return 2.0;
+        let r = scene(ox + dx * t, oy + dy * t);
+        if r.sd < EPSILON {
+            return r.emissive;
         }
         i += 1;
-        t += sd;
+        t += r.sd;
     }
     0.0
 }
