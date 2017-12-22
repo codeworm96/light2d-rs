@@ -36,7 +36,7 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
 fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> f64 {
     let mut sum = 0.0;
     for i in 0..N {
-        let a = 2.0 * PI * i as f64 / N as f64;
+        let a = 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64;
         sum += trace(x, y, a.cos(), a.sin());
     }
     sum / N as f64
