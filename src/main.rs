@@ -9,7 +9,7 @@ use rand::{Rng, ThreadRng};
 const W: u32 = 512;
 const H: u32 = 512;
 const N: u32 = 64;
-const MAX_STEP: u32 = 10;
+const MAX_STEP: u32 = 64;
 const MAX_DISTANCE: f64 = 2.0;
 const EPSILON: f64 = 1e-6;
 
@@ -18,11 +18,28 @@ struct Res {
     emissive: f64,
 }
 
-fn scene(x: f64, y: f64) -> Res {
-    Res {
-        sd: circle_sdf(x, y, 0.5, 0.5, 0.1),
-        emissive: 2.0,
+fn union_op(a: Res, b: Res) -> Res {
+    if a.sd < b.sd {
+        a
+    } else {
+        b
     }
+}
+
+fn scene(x: f64, y: f64) -> Res {
+    let r1 = Res {
+        sd: circle_sdf(x, y, 0.3, 0.3, 0.1),
+        emissive: 2.0,
+    };
+    let r2 = Res {
+        sd: circle_sdf(x, y, 0.3, 0.7, 0.05),
+        emissive: 0.8,
+    };
+    let r3 = Res {
+        sd: circle_sdf(x, y, 0.7, 0.5, 0.1),
+        emissive: 0.0,
+    };
+    union_op(union_op(r1, r2), r3)
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
