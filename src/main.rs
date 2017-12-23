@@ -18,11 +18,15 @@ struct Res {
     emissive: f64,
 }
 
-fn union_op(a: Res, b: Res) -> Res {
-    if a.sd < b.sd {
-        a
-    } else {
-        b
+impl std::ops::Add<Res> for Res {
+    type Output = Res;
+
+    fn add(self, rhs: Res) -> Res {
+        if self.sd < rhs.sd {
+            self
+        } else {
+            rhs
+        }
     }
 }
 
@@ -39,7 +43,7 @@ fn scene(x: f64, y: f64) -> Res {
         sd: circle_sdf(x, y, 0.7, 0.5, 0.1),
         emissive: 0.0,
     };
-    union_op(union_op(r1, r2), r3)
+    r1 + r2 + r3
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
