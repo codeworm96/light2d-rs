@@ -30,20 +30,50 @@ impl std::ops::Add<Res> for Res {
     }
 }
 
+impl std::ops::Sub<Res> for Res {
+    type Output = Res;
+
+    fn sub(self, rhs: Res) -> Res {
+        Res {
+            sd: if self.sd > -rhs.sd {
+                self.sd
+            } else {
+                -rhs.sd
+            },
+            .. self
+        }
+    }
+}
+
+impl std::ops::Mul<Res> for Res {
+    type Output = Res;
+
+    fn mul(self, rhs: Res) -> Res {
+        if self.sd > rhs.sd {
+            Res {
+                sd: self.sd,
+                emissive: rhs.emissive,
+            }
+        } else {
+            Res {
+                sd: rhs.sd,
+                emissive: self.emissive,
+            }
+        }
+    }
+}
+
+
 fn scene(x: f64, y: f64) -> Res {
-    let r1 = Res {
-        sd: circle_sdf(x, y, 0.3, 0.3, 0.1),
-        emissive: 2.0,
+    let a = Res {
+        sd: circle_sdf(x, y, 0.4, 0.5, 0.2),
+        emissive: 1.0,
     };
-    let r2 = Res {
-        sd: circle_sdf(x, y, 0.3, 0.7, 0.05),
+    let b = Res {
+        sd: circle_sdf(x, y, 0.6, 0.5, 0.2),
         emissive: 0.8,
     };
-    let r3 = Res {
-        sd: circle_sdf(x, y, 0.7, 0.5, 0.1),
-        emissive: 0.0,
-    };
-    r1 + r2 + r3
+    b - a
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
