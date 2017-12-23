@@ -52,12 +52,12 @@ impl std::ops::Mul<Res> for Res {
         if self.sd > rhs.sd {
             Res {
                 sd: self.sd,
-                emissive: rhs.emissive,
+                .. rhs
             }
         } else {
             Res {
                 sd: rhs.sd,
-                emissive: self.emissive,
+                .. self
             }
         }
     }
