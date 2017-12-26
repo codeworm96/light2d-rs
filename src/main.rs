@@ -50,15 +50,9 @@ impl std::ops::Mul<Res> for Res {
 
     fn mul(self, rhs: Res) -> Res {
         if self.sd > rhs.sd {
-            Res {
-                sd: self.sd,
-                .. rhs
-            }
+            self
         } else {
-            Res {
-                sd: rhs.sd,
-                .. self
-            }
+            rhs
         }
     }
 }
@@ -66,20 +60,24 @@ impl std::ops::Mul<Res> for Res {
 
 fn scene(x: f64, y: f64) -> Res {
     let a = Res {
-        sd: circle_sdf(x, y, 0.4, 0.5, 0.2),
+        sd: circle_sdf(x, y, 0.5, 0.5, 0.2),
         emissive: 1.0,
     };
     let b = Res {
-        sd: circle_sdf(x, y, 0.6, 0.5, 0.2),
+        sd: plane_sdf(x, y, 0.0, 0.5, 0.0, 1.0),
         emissive: 0.8,
     };
-    b - a
+    a * b
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
     let ux = x - cx;
     let uy = y - cy;
     (ux * ux + uy * uy).sqrt() - r
+}
+
+fn plane_sdf(x: f64, y: f64, px: f64, py: f64, nx: f64, ny: f64) -> f64 {
+    (x - px) * nx + (y - py) * ny
 }
 
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
