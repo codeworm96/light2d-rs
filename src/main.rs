@@ -59,15 +59,10 @@ impl std::ops::Mul<Res> for Res {
 
 
 fn scene(x: f64, y: f64) -> Res {
-    let a = Res {
-        sd: circle_sdf(x, y, 0.5, 0.5, 0.2),
+    Res {
+        sd: capsule_sdf(x, y, 0.4, 0.4, 0.6, 0.6, 0.1),
         emissive: 1.0,
-    };
-    let b = Res {
-        sd: plane_sdf(x, y, 0.0, 0.5, 0.0, 1.0),
-        emissive: 0.8,
-    };
-    a * b
+    }
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
@@ -78,6 +73,21 @@ fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
 
 fn plane_sdf(x: f64, y: f64, px: f64, py: f64, nx: f64, ny: f64) -> f64 {
     (x - px) * nx + (y - py) * ny
+}
+
+fn segment_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
+    let vx = x - ax;
+    let vy = y - ay;
+    let ux = bx - ax;
+    let uy = by - ay;
+    let t = ((vx * ux + vy * uy) / (ux * ux + uy * uy)).min(1.0).max(0.0);
+    let dx = vx - ux * t;
+    let dy = vy - uy * t;
+    (dx * dx + dy * dy).sqrt()
+}
+
+fn capsule_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64, r: f64) -> f64 {
+    segment_sdf(x, y, ax, ay, bx, by) - r
 }
 
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
