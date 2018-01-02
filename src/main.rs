@@ -67,17 +67,17 @@ fn scene(x: f64, y: f64) -> Res {
         emissive: 2.0,
         reflectivity: 0.0,
     };
-    let b = Res {
-        sd: box_sdf(x, y, 0.5, 0.8, 2.0 * PI / 16.0, 0.1, 0.1),
+    let d = Res {
+        sd: plane_sdf(x, y, 0.0, 0.5, 0.0, -1.0),
         emissive: 0.0,
         reflectivity: 0.9,
     };
-    let c = Res {
-        sd: box_sdf(x, y, 0.8, 0.5, 2.0 * PI / 16.0, 0.1, 0.1),
+    let e = Res {
+        sd: circle_sdf(x, y, 0.5, 0.5, 0.4),
         emissive: 0.0,
         reflectivity: 0.9,
     };
-    a + b + c
+    a + (d - e)
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
