@@ -60,7 +60,7 @@ impl std::ops::Mul<Res> for Res {
 
 fn scene(x: f64, y: f64) -> Res {
     Res {
-        sd: box_sdf(x, y, 0.5, 0.5, 2.0 * PI / 16.0, 0.3, 0.1) - 0.1,
+        sd: triangle_sdf(x, y, 0.5, 0.2, 0.8, 0.8, 0.3, 0.6) - 0.1,
         emissive: 1.0,
     }
 }
@@ -98,6 +98,19 @@ fn box_sdf(x: f64, y: f64, cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> f6
     let ax = dx.max(0.0);
     let ay = dy.max(0.0);
     dx.max(dy).min(0.0) + (ax * ax + ay * ay).sqrt()
+}
+
+fn triangle_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64) -> f64 {
+    let d = segment_sdf(x, y, ax, ay, bx, by)
+        .min(segment_sdf(x, y, bx, by, cx, cy))
+        .min(segment_sdf(x, y, cx, cy, ax, ay));
+    if (bx - ax) * (y - ay) > (by - ay) * (x - ax) &&
+        (cx - bx) * (y - by) > (cy - by) * (x - bx) &&
+        (ax - cx) * (y - cy) > (ay - cy) * (x - cx) {
+        -d
+    } else {
+        d
+    }
 }
 
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
