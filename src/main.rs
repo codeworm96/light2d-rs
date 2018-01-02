@@ -19,6 +19,7 @@ struct Res {
     sd: f64,
     emissive: f64,
     reflectivity: f64,
+    eta: f64,
 }
 
 impl std::ops::Add<Res> for Res {
@@ -62,22 +63,70 @@ impl std::ops::Mul<Res> for Res {
 
 
 fn scene(x: f64, y: f64) -> Res {
-    let a = Res {
-        sd: circle_sdf(x, y, 0.4, 0.2, 0.1),
-        emissive: 2.0,
+    let a = Res { 
+        sd: circle_sdf(x, y, -0.2, -0.2, 0.1),
+        emissive: 10.0,
         reflectivity: 0.0,
+        eta: 0.0,
+    };
+    let b = Res {
+        sd: box_sdf(x, y, 0.5, 0.5, 0.0, 0.3, 0.2),
+        emissive: 0.0,
+        reflectivity: 0.2,
+        eta: 1.5,
+    };
+    let c = Res {
+        sd: circle_sdf(x, y, 0.5, -0.5, 0.05),
+        emissive: 20.0,
+        reflectivity: 0.0,
+        eta: 0.0,
     };
     let d = Res {
-        sd: plane_sdf(x, y, 0.0, 0.5, 0.0, -1.0),
+        sd: circle_sdf(x, y, 0.5, 0.2, 0.35),
         emissive: 0.0,
-        reflectivity: 0.9,
+        reflectivity: 0.2,
+        eta: 1.5,
     };
     let e = Res {
-        sd: circle_sdf(x, y, 0.5, 0.5, 0.4),
+        sd: circle_sdf(x, y, 0.5, 0.8, 0.35),
         emissive: 0.0,
-        reflectivity: 0.9,
+        reflectivity: 0.2,
+        eta: 1.5,
     };
-    a + (d - e)
+    let f = Res {
+        sd: box_sdf(x, y, 0.5, 0.5, 0.0, 0.2, 0.1),
+        emissive: 0.0,
+        reflectivity: 0.2,
+        eta: 1.5,
+    };
+    let g = Res {
+        sd: circle_sdf(x, y, 0.5, 0.12, 0.35),
+        emissive: 0.0,
+        reflectivity: 0.2,
+        eta: 1.5,
+    };
+    let h = Res {
+        sd: circle_sdf(x, y, 0.5, 0.87, 0.35),
+        emissive: 0.0,
+        reflectivity: 0.2,
+        eta: 1.5,
+    };
+    let i = Res {
+        sd: circle_sdf(x, y, 0.5, 0.5, 0.2),
+        emissive: 0.0,
+        reflectivity: 0.2,
+        eta: 1.5,
+    };
+    let j = Res {
+        sd: plane_sdf(x, y, 0.5, 0.5, 0.0, -1.0),
+        emissive: 0.0,
+        reflectivity: 0.2,
+        eta: 1.5,
+    };
+    // a + b
+    // c + d * e
+    // c + (f - (g + h))
+    c + i * j
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
@@ -139,24 +188,59 @@ fn gradient(x: f64, y: f64) -> (f64, f64) {
     (nx, ny)
 }
 
+fn refract(ix: f64, iy: f64, nx: f64, ny: f64, eta: f64) -> Option<(f64, f64)> {
+    let dot = ix * nx + iy * ny;
+    let k = 1.0 - eta * eta * (1.0 - dot * dot);
+    if k < 0.0 {
+        return None; // all reflection
+    }
+    let a = eta * dot + k.sqrt();
+    Some((eta * ix - a * nx, eta * iy - a * ny))
+}
+
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
     let mut t = 0.0;
+    let sign = if scene(ox, oy).sd > 0.0 {
+        1.0
+    } else {
+        -1.0
+    };
     let mut i = 0;
     while i < MAX_STEP && t < MAX_DISTANCE {
         let x = ox + dx * t;
         let y = oy + dy * t;
         let r = scene(x, y);
-        if r.sd < EPSILON {
+        if r.sd * sign < EPSILON {
             let mut sum = r.emissive;
-            if depth < MAX_DEPTH && r.reflectivity > 0.0 {
-                let (nx, ny) = gradient(x, y);
-                let (rx, ry) = reflect(dx, dy, nx, ny);
-                sum += r.reflectivity * trace(x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1);
+            if depth < MAX_DEPTH && (r.reflectivity > 0.0 || r.eta > 0.0) {
+                let mut refl = r.reflectivity;
+                let (mut nx, mut ny) = gradient(x, y);
+                nx *= sign;
+                ny *= sign;
+                if r.eta > 0.0 {
+                    let eta = if sign < 0.0 {
+                        r.eta
+                    } else {
+                        1.0 / r.eta
+                    };
+                    match refract(dx, dy, nx, ny, eta) {
+                        Some((rx, ry)) => {
+                            sum += (1.0 - refl) * trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1)
+                        }
+                        None => {
+                            refl = 1.0
+                        }
+                    }
+                }
+                if refl > 0.0 {
+                    let (rx, ry) = reflect(dx, dy, nx, ny);
+                    sum += refl * trace(x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1);
+                }
             }
             return sum;
         }
         i += 1;
-        t += r.sd;
+        t += r.sd * sign;
     }
     0.0
 }
