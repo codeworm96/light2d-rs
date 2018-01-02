@@ -60,7 +60,7 @@ impl std::ops::Mul<Res> for Res {
 
 fn scene(x: f64, y: f64) -> Res {
     Res {
-        sd: capsule_sdf(x, y, 0.4, 0.4, 0.6, 0.6, 0.1),
+        sd: box_sdf(x, y, 0.5, 0.5, 2.0 * PI / 16.0, 0.3, 0.1) - 0.1,
         emissive: 1.0,
     }
 }
@@ -88,6 +88,16 @@ fn segment_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
 
 fn capsule_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64, r: f64) -> f64 {
     segment_sdf(x, y, ax, ay, bx, by) - r
+}
+
+fn box_sdf(x: f64, y: f64, cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> f64 {
+    let costheta = theta.cos();
+    let sintheta = theta.sin();
+    let dx = ((x - cx) * costheta + (y - cy) * sintheta).abs() - sx;
+    let dy = ((y - cy) * costheta - (x - cx) * sintheta).abs() - sy;
+    let ax = dx.max(0.0);
+    let ay = dy.max(0.0);
+    dx.max(dy).min(0.0) + (ax * ax + ay * ay).sqrt()
 }
 
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
