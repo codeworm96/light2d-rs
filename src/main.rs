@@ -198,6 +198,12 @@ fn refract(ix: f64, iy: f64, nx: f64, ny: f64, eta: f64) -> Option<(f64, f64)> {
     Some((eta * ix - a * nx, eta * iy - a * ny))
 }
 
+fn fresnel(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
+    let rs = (etat * cosi - etai * cost) / (etat * cosi + etai * cost);
+    let rp = (etat * cost - etai * cosi) / (etat * cost + etai * cosi);
+    (rs * rs + rp * rp) * 0.5
+}
+
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
     let mut t = 0.0;
     let sign = if scene(ox, oy).sd > 0.0 {
@@ -225,6 +231,13 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
                     };
                     match refract(dx, dy, nx, ny, eta) {
                         Some((rx, ry)) => {
+                            let cosi = -(dx * nx + dy * ny);
+                            let cost = -(rx * nx + ry * ny);
+                            refl = if sign < 0.0 {
+                                fresnel(cosi, cost, r.eta, 1.0)
+                            } else {
+                                fresnel(cosi, cost, 1.0, r.eta)
+                            };
                             sum += (1.0 - refl) * trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1)
                         }
                         None => {
