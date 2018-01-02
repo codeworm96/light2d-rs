@@ -12,10 +12,13 @@ const N: u32 = 64;
 const MAX_STEP: u32 = 64;
 const MAX_DISTANCE: f64 = 2.0;
 const EPSILON: f64 = 1e-6;
+const BIAS: f64 = 1e-4;
+const MAX_DEPTH: u32 = 3;
 
 struct Res {
     sd: f64,
     emissive: f64,
+    reflectivity: f64,
 }
 
 impl std::ops::Add<Res> for Res {
@@ -62,14 +65,17 @@ fn scene(x: f64, y: f64) -> Res {
     let a = Res {
         sd: circle_sdf(x, y, 0.4, 0.2, 0.1),
         emissive: 2.0,
+        reflectivity: 0.0,
     };
     let b = Res {
         sd: box_sdf(x, y, 0.5, 0.8, 2.0 * PI / 16.0, 0.1, 0.1),
         emissive: 0.0,
+        reflectivity: 0.9,
     };
     let c = Res {
         sd: box_sdf(x, y, 0.8, 0.5, 2.0 * PI / 16.0, 0.1, 0.1),
         emissive: 0.0,
+        reflectivity: 0.9,
     };
     a + b + c
 }
@@ -133,13 +139,21 @@ fn gradient(x: f64, y: f64) -> (f64, f64) {
     (nx, ny)
 }
 
-fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
+fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
     let mut t = 0.0;
     let mut i = 0;
     while i < MAX_STEP && t < MAX_DISTANCE {
-        let r = scene(ox + dx * t, oy + dy * t);
+        let x = ox + dx * t;
+        let y = oy + dy * t;
+        let r = scene(x, y);
         if r.sd < EPSILON {
-            return r.emissive;
+            let mut sum = r.emissive;
+            if depth < MAX_DEPTH && r.reflectivity > 0.0 {
+                let (nx, ny) = gradient(x, y);
+                let (rx, ry) = reflect(dx, dy, nx, ny);
+                sum += r.reflectivity * trace(x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1);
+            }
+            return sum;
         }
         i += 1;
         t += r.sd;
@@ -151,7 +165,7 @@ fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> f64 {
     let mut sum = 0.0;
     for i in 0..N {
         let a = 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64;
-        sum += trace(x, y, a.cos(), a.sin());
+        sum += trace(x, y, a.cos(), a.sin(), 0);
     }
     sum / N as f64
 }
@@ -163,11 +177,8 @@ fn main() {
         for y in 0..H {
             let xx = x as f64 / W as f64;
             let yy = y as f64 / H as f64;
-            let (nx, ny) = gradient(xx, yy);
-            let r = ((nx.min(0.5).max(-0.5) + 0.5) * 255.0) as u8;
-            let g = ((ny.min(0.5).max(-0.5) + 0.5) * 255.0) as u8;
-            // let brightness = min((sample(&mut rng, xx, yy) * 255.0) as u32, 255) as u8;
-            img.put_pixel(x, y, Rgb([r, g, 0]));
+            let brightness = min((sample(&mut rng, xx, yy) * 255.0) as u32, 255) as u8;
+            img.put_pixel(x, y, Rgb([brightness, brightness, brightness]));
         }
     }
     img.save("out.png").unwrap();
