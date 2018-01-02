@@ -59,10 +59,19 @@ impl std::ops::Mul<Res> for Res {
 
 
 fn scene(x: f64, y: f64) -> Res {
-    Res {
-        sd: triangle_sdf(x, y, 0.5, 0.2, 0.8, 0.8, 0.3, 0.6) - 0.1,
-        emissive: 1.0,
-    }
+    let a = Res {
+        sd: circle_sdf(x, y, 0.4, 0.2, 0.1),
+        emissive: 2.0,
+    };
+    let b = Res {
+        sd: box_sdf(x, y, 0.5, 0.8, 2.0 * PI / 16.0, 0.1, 0.1),
+        emissive: 0.0,
+    };
+    let c = Res {
+        sd: box_sdf(x, y, 0.8, 0.5, 2.0 * PI / 16.0, 0.1, 0.1),
+        emissive: 0.0,
+    };
+    a + b + c
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
@@ -113,6 +122,17 @@ fn triangle_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy:
     }
 }
 
+fn reflect(ix: f64, iy: f64, nx: f64, ny: f64) -> (f64, f64) {
+    let dot2 = (ix * nx + iy * ny) * 2.0;
+    (ix - dot2 * nx, iy - dot2 * ny)
+}
+
+fn gradient(x: f64, y: f64) -> (f64, f64) {
+    let nx = (scene(x + EPSILON, y).sd - scene(x - EPSILON, y).sd) * (0.5 / EPSILON);
+    let ny = (scene(x, y + EPSILON).sd - scene(x, y - EPSILON).sd) * (0.5 / EPSILON);
+    (nx, ny)
+}
+
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64) -> f64 {
     let mut t = 0.0;
     let mut i = 0;
@@ -143,8 +163,11 @@ fn main() {
         for y in 0..H {
             let xx = x as f64 / W as f64;
             let yy = y as f64 / H as f64;
-            let brightness = min((sample(&mut rng, xx, yy) * 255.0) as u32, 255) as u8;
-            img.put_pixel(x, y, Rgb([brightness, brightness, brightness]));
+            let (nx, ny) = gradient(xx, yy);
+            let r = ((nx.min(0.5).max(-0.5) + 0.5) * 255.0) as u8;
+            let g = ((ny.min(0.5).max(-0.5) + 0.5) * 255.0) as u8;
+            // let brightness = min((sample(&mut rng, xx, yy) * 255.0) as u32, 255) as u8;
+            img.put_pixel(x, y, Rgb([r, g, 0]));
         }
     }
     img.save("out.png").unwrap();
