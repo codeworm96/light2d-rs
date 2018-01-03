@@ -204,6 +204,18 @@ fn fresnel(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
     (rs * rs + rp * rp) * 0.5
 }
 
+fn schlick(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
+    let r0 = (etai - etat) / (etai + etat);
+    let r0 = r0 * r0;
+    let a = if etai < etat {
+        1.0 - cosi
+    } else {
+        1.0 - cost
+    };
+    let aa = a * a;
+    r0 + (1.0 - r0) * aa * aa * a
+}
+
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
     let mut t = 0.0;
     let sign = if scene(ox, oy).sd > 0.0 {
@@ -234,9 +246,9 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
                             let cosi = -(dx * nx + dy * ny);
                             let cost = -(rx * nx + ry * ny);
                             refl = if sign < 0.0 {
-                                fresnel(cosi, cost, r.eta, 1.0)
+                                schlick(cosi, cost, r.eta, 1.0)
                             } else {
-                                fresnel(cosi, cost, 1.0, r.eta)
+                                schlick(cosi, cost, 1.0, r.eta)
                             };
                             sum += (1.0 - refl) * trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1)
                         }
