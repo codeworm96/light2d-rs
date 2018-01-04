@@ -20,6 +20,7 @@ struct Res {
     emissive: f64,
     reflectivity: f64,
     eta: f64,
+    absorption: f64,
 }
 
 impl std::ops::Add<Res> for Res {
@@ -68,13 +69,16 @@ fn scene(x: f64, y: f64) -> Res {
         emissive: 10.0,
         reflectivity: 0.0,
         eta: 0.0,
+        absorption: 0.0,
     };
     let b = Res {
         sd: box_sdf(x, y, 0.5, 0.5, 0.0, 0.3, 0.2),
         emissive: 0.0,
         reflectivity: 0.2,
         eta: 1.5,
+        absorption: 4.0,
     };
+    /*
     let c = Res {
         sd: circle_sdf(x, y, 0.5, -0.5, 0.05),
         emissive: 20.0,
@@ -123,10 +127,11 @@ fn scene(x: f64, y: f64) -> Res {
         reflectivity: 0.2,
         eta: 1.5,
     };
-    // a + b
+    */
+    a + b
     // c + d * e
     // c + (f - (g + h))
-    c + i * j
+    // c + i * j
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
@@ -216,6 +221,10 @@ fn schlick(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
     r0 + (1.0 - r0) * aa * aa * a
 }
 
+fn beer_lambert(a: f64, d: f64) -> f64 {
+    (-a * d).exp()
+}
+
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
     let mut t = 0.0;
     let sign = if scene(ox, oy).sd > 0.0 {
@@ -261,6 +270,9 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
                     let (rx, ry) = reflect(dx, dy, nx, ny);
                     sum += refl * trace(x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1);
                 }
+            }
+            if sign < 0.0 {
+                sum *= beer_lambert(r.absorption, t);
             }
             return sum;
         }
