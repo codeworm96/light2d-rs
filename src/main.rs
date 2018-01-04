@@ -8,19 +8,67 @@ use rand::{Rng, ThreadRng};
 
 const W: u32 = 512;
 const H: u32 = 512;
-const N: u32 = 64;
+const N: u32 = 256;
 const MAX_STEP: u32 = 64;
-const MAX_DISTANCE: f64 = 2.0;
+const MAX_DISTANCE: f64 = 5.0;
 const EPSILON: f64 = 1e-6;
 const BIAS: f64 = 1e-4;
-const MAX_DEPTH: u32 = 3;
+const MAX_DEPTH: u32 = 5;
+
+struct Color {
+    r: f64,
+    g: f64,
+    b: f64,
+}
+
+const BLACK: Color = Color {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+};
+
+impl std::ops::Add<Color> for Color {
+    type Output = Color;
+
+    fn add(self, rhs: Color) -> Color {
+        Color {
+            r: self.r + rhs.r,
+            g: self.g + rhs.g,
+            b: self.b + rhs.b,
+        }
+    }
+}
+
+impl std::ops::Mul<Color> for Color {
+    type Output = Color;
+
+    fn mul(self, rhs: Color) -> Color {
+        Color {
+            r: self.r * rhs.r,
+            g: self.g * rhs.g,
+            b: self.b * rhs.b,
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for Color {
+    type Output = Color;
+
+    fn mul(self, s: f64) -> Color {
+        Color {
+            r: self.r * s,
+            g: self.g * s,
+            b: self.b * s,
+        }
+    }
+}
 
 struct Res {
     sd: f64,
-    emissive: f64,
+    emissive: Color,
     reflectivity: f64,
     eta: f64,
-    absorption: f64,
+    absorption: Color,
 }
 
 impl std::ops::Add<Res> for Res {
@@ -65,73 +113,28 @@ impl std::ops::Mul<Res> for Res {
 
 fn scene(x: f64, y: f64) -> Res {
     let a = Res { 
-        sd: circle_sdf(x, y, -0.2, -0.2, 0.1),
-        emissive: 10.0,
+        sd: circle_sdf(x, y, 0.5, -0.2, 0.1),
+        emissive: Color {
+            r: 10.0,
+            g: 10.0,
+            b: 10.0,
+        },
         reflectivity: 0.0,
         eta: 0.0,
-        absorption: 0.0,
+        absorption: BLACK,
     };
     let b = Res {
-        sd: box_sdf(x, y, 0.5, 0.5, 0.0, 0.3, 0.2),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-        absorption: 4.0,
-    };
-    /*
-    let c = Res {
-        sd: circle_sdf(x, y, 0.5, -0.5, 0.05),
-        emissive: 20.0,
+        sd: ngon_sdf(x, y, 0.5, 0.5, 0.25, 5.0),
+        emissive: BLACK,
         reflectivity: 0.0,
-        eta: 0.0,
-    };
-    let d = Res {
-        sd: circle_sdf(x, y, 0.5, 0.2, 0.35),
-        emissive: 0.0,
-        reflectivity: 0.2,
         eta: 1.5,
+        absorption: Color {
+            r: 4.0,
+            g: 4.0,
+            b: 1.0,
+        },
     };
-    let e = Res {
-        sd: circle_sdf(x, y, 0.5, 0.8, 0.35),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-    };
-    let f = Res {
-        sd: box_sdf(x, y, 0.5, 0.5, 0.0, 0.2, 0.1),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-    };
-    let g = Res {
-        sd: circle_sdf(x, y, 0.5, 0.12, 0.35),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-    };
-    let h = Res {
-        sd: circle_sdf(x, y, 0.5, 0.87, 0.35),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-    };
-    let i = Res {
-        sd: circle_sdf(x, y, 0.5, 0.5, 0.2),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-    };
-    let j = Res {
-        sd: plane_sdf(x, y, 0.5, 0.5, 0.0, -1.0),
-        emissive: 0.0,
-        reflectivity: 0.2,
-        eta: 1.5,
-    };
-    */
     a + b
-    // c + d * e
-    // c + (f - (g + h))
-    // c + i * j
 }
 
 fn circle_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64) -> f64 {
@@ -182,6 +185,15 @@ fn triangle_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy:
     }
 }
 
+fn ngon_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64, n: f64) -> f64 {
+    let ux = x - cx;
+    let uy = y - cy;
+    let a = 2.0 * PI / n;
+    let t = (uy.atan2(ux) + 2.0 * PI) % a;
+    let s = (ux * ux + uy * uy).sqrt();
+    plane_sdf(s * t.cos(), s * t.sin(), r, 0.0, (a * 0.5).cos(), (a * 0.5).sin())
+}
+
 fn reflect(ix: f64, iy: f64, nx: f64, ny: f64) -> (f64, f64) {
     let dot2 = (ix * nx + iy * ny) * 2.0;
     (ix - dot2 * nx, iy - dot2 * ny)
@@ -221,11 +233,15 @@ fn schlick(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
     r0 + (1.0 - r0) * aa * aa * a
 }
 
-fn beer_lambert(a: f64, d: f64) -> f64 {
-    (-a * d).exp()
+fn beer_lambert(a: Color, d: f64) -> Color {
+    Color {
+        r: (-a.r * d).exp(),
+        g: (-a.g * d).exp(),
+        b: (-a.b * d).exp(),
+    }
 }
 
-fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
+fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
     let mut t = 0.0;
     let sign = if scene(ox, oy).sd > 0.0 {
         1.0
@@ -259,7 +275,7 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
                             } else {
                                 schlick(cosi, cost, 1.0, r.eta)
                             };
-                            sum += (1.0 - refl) * trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1)
+                            sum = sum + trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1) * (1.0 - refl)
                         }
                         None => {
                             refl = 1.0
@@ -268,27 +284,27 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> f64 {
                 }
                 if refl > 0.0 {
                     let (rx, ry) = reflect(dx, dy, nx, ny);
-                    sum += refl * trace(x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1);
+                    sum = sum + trace(x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1) * refl;
                 }
             }
             if sign < 0.0 {
-                sum *= beer_lambert(r.absorption, t);
+                sum = sum * beer_lambert(r.absorption, t);
             }
             return sum;
         }
         i += 1;
         t += r.sd * sign;
     }
-    0.0
+    BLACK
 }
 
-fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> f64 {
-    let mut sum = 0.0;
+fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> Color {
+    let mut sum = BLACK;
     for i in 0..N {
         let a = 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64;
-        sum += trace(x, y, a.cos(), a.sin(), 0);
+        sum = sum + trace(x, y, a.cos(), a.sin(), 0);
     }
-    sum / N as f64
+    sum * (1.0 / N as f64)
 }
 
 fn main() {
@@ -298,8 +314,11 @@ fn main() {
         for y in 0..H {
             let xx = x as f64 / W as f64;
             let yy = y as f64 / H as f64;
-            let brightness = min((sample(&mut rng, xx, yy) * 255.0) as u32, 255) as u8;
-            img.put_pixel(x, y, Rgb([brightness, brightness, brightness]));
+            let color = sample(&mut rng, xx, yy);
+            let r = min((color.r * 255.0) as u32, 255) as u8;
+            let g = min((color.g * 255.0) as u32, 255) as u8;
+            let b = min((color.b * 255.0) as u32, 255) as u8;
+            img.put_pixel(x, y, Rgb([r, g, b]));
         }
     }
     img.save("out.png").unwrap();
