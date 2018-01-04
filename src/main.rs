@@ -1,10 +1,12 @@
 extern crate image;
 extern crate rand;
+extern crate rayon;
 
 use std::f64::consts::PI;
 use std::cmp::min;
 use image::{ImageBuffer, Rgb};
 use rand::{Rng, ThreadRng};
+use rayon::prelude::*;
 
 const W: u32 = 512;
 const H: u32 = 512;
@@ -21,11 +23,15 @@ struct Color {
     b: f64,
 }
 
-const BLACK: Color = Color {
-    r: 0.0,
-    g: 0.0,
-    b: 0.0,
-};
+impl Color {
+    fn black() -> Color {
+        Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        }
+    }
+}
 
 impl std::ops::Add<Color> for Color {
     type Output = Color;
@@ -60,6 +66,14 @@ impl std::ops::Mul<f64> for Color {
             g: self.g * s,
             b: self.b * s,
         }
+    }
+}
+
+impl std::iter::Sum for Color {
+    fn sum<I>(iter: I) -> Color
+        where I: Iterator<Item = Color>
+    {
+        iter.fold(Color::black(), std::ops::Add::add)
     }
 }
 
@@ -121,11 +135,11 @@ fn scene(x: f64, y: f64) -> Res {
         },
         reflectivity: 0.0,
         eta: 0.0,
-        absorption: BLACK,
+        absorption: Color::black(),
     };
     let b = Res {
         sd: ngon_sdf(x, y, 0.5, 0.5, 0.25, 5.0),
-        emissive: BLACK,
+        emissive: Color::black(),
         reflectivity: 0.0,
         eta: 1.5,
         absorption: Color {
@@ -295,15 +309,15 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
         i += 1;
         t += r.sd * sign;
     }
-    BLACK
+    Color::black()
 }
 
 fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> Color {
-    let mut sum = BLACK;
-    for i in 0..N {
-        let a = 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64;
-        sum = sum + trace(x, y, a.cos(), a.sin(), 0);
-    }
+    let mut sum: Color = (0..N).map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
+        .collect::<Vec<f64>>()
+        .par_iter()
+        .map(|a| trace(x, y, a.cos(), a.sin(), 0))
+        .sum();
     sum * (1.0 / N as f64)
 }
 
