@@ -12,10 +12,10 @@ const W: u32 = 512;
 const H: u32 = 512;
 const N: u32 = 256;
 const MAX_STEP: u32 = 64;
-const MAX_DISTANCE: f64 = 5.0;
+const MAX_DISTANCE: f64 = 2.0;
 const EPSILON: f64 = 1e-6;
 const BIAS: f64 = 1e-4;
-const MAX_DEPTH: u32 = 5;
+const MAX_DEPTH: u32 = 3;
 
 struct Color {
     r: f64,
@@ -313,7 +313,7 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
 }
 
 fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> Color {
-    let mut sum: Color = (0..N).map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
+    let sum: Color = (0..N).map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
         .collect::<Vec<f64>>()
         .par_iter()
         .map(|a| trace(x, y, a.cos(), a.sin(), 0))
