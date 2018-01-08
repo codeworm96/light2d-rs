@@ -10,7 +10,7 @@ use rayon::prelude::*;
 
 const W: u32 = 512;
 const H: u32 = 512;
-const N: u32 = 64;
+const N: u32 = 256;
 const BIAS: f64 = 1e-4;
 const EPSILON: f64 = 1e-6;
 const MAX_DEPTH: u32 = 3;
@@ -514,13 +514,31 @@ fn main() {
     let mut rng = rand::thread_rng();
     let scene = Scene {
         entities: vec![Entity {
-            shape: Box::new(Polygon::rectangle(0.5, 0.5, 2.0 * PI / 16.0, 0.3, 0.1)),
+            shape: Box::new(Circle {
+                cx: 0.4,
+                cy: 0.2,
+                r: 0.1,
+            }),
             emissive: Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
+                r: 2.0,
+                g: 2.0,
+                b: 2.0,
             },
             reflectivity: 0.0,
+            eta: 0.0,
+            absorption: Color::black(),
+        },
+        Entity {
+            shape: Box::new(Polygon::rectangle(0.5, 0.8, 2.0 * PI / 16.0, 0.1, 0.1)),
+            emissive: Color::black(),
+            reflectivity: 0.9,
+            eta: 0.0,
+            absorption: Color::black(),
+        },
+        Entity {
+            shape: Box::new(Polygon::rectangle(0.8, 0.5, 2.0 * PI / 16.0, 0.1, 0.1)),
+            emissive: Color::black(),
+            reflectivity: 0.9,
             eta: 0.0,
             absorption: Color::black(),
         }],
