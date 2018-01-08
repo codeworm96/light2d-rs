@@ -23,8 +23,8 @@ struct Color {
 }
 
 impl Color {
-    fn black() -> Color {
-        Color {
+    fn black() -> Self {
+        Self {
             r: 0.0,
             g: 0.0,
             b: 0.0,
@@ -170,9 +170,9 @@ struct Polygon {
 }
 
 impl Polygon {
-    fn new(p: Vec<(f64, f64)>) -> Polygon {
+    fn new(p: Vec<(f64, f64)>) -> Self {
         if p.len() > 1 {
-            Polygon {
+            Self {
                 points: p,
             }
         } else {
@@ -180,8 +180,8 @@ impl Polygon {
         }
     }
 
-    fn rectangle(cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> Polygon {
-        Polygon::new([(sx, sy), (-sx, sy), (-sx, -sy), (sx, -sy)].iter()
+    fn rectangle(cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> Self {
+        Self::new([(sx, sy), (-sx, sy), (-sx, -sy), (sx, -sy)].iter()
             .map(|&(x, y)| (x * theta.cos() - y * theta.sin(), x * theta.sin() + y * theta.cos()))
             .map(|(x, y)| (x + cx, y + cy))
             .collect())
