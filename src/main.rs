@@ -133,6 +133,42 @@ impl Shape for Circle {
     }
 }
 
+struct UnionShape {
+    a: Box<Shape + Sync>,
+    b: Box<Shape + Sync>,
+}
+
+impl Shape for UnionShape {
+    fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<Intersection> {
+        match (self.a.intersect(p, d), self.b.intersect(p, d)) {
+            (Some(i1), Some(i2)) => {
+                let d1 = distance(p, i1.point);
+                let d2 = distance(p, i2.point);
+                if d1 < d2 {
+                    Some(i1)
+                } else {
+                    Some(i2)
+                }
+            }
+            (None, r2) => r2,
+            (r1, None) => r1,
+        }
+    }
+
+    fn is_inside(&self, p: (f64, f64)) -> bool {
+        self.a.is_inside(p) || self.b.is_inside(p)
+    }
+}
+
+impl UnionShape {
+    fn new(a: Box<Shape + Sync>, b: Box<Shape + Sync>) -> UnionShape {
+        UnionShape {
+            a: a,
+            b: b,
+        }
+    }
+}
+
 struct EntityIntersection {
     point: (f64, f64),
     normal: (f64, f64),
@@ -298,45 +334,19 @@ fn main() {
     let mut rng = rand::thread_rng();
     let scene = Scene {
         entities: vec![Entity {
-            shape: Box::new(Circle {
-                cx: 0.3,
-                cy: 0.3,
-                r: 0.1,
-            }),
-            emissive: Color {
-                r: 2.0,
-                g: 2.0,
-                b: 2.0,
-            },
-            reflectivity: 0.0,
-            eta: 0.0,
-            absorption: Color::black(),
-        },
-        Entity {
-            shape: Box::new(Circle {
-                cx: 0.3,
-                cy: 0.7,
-                r: 0.05,
-            }),
-            emissive: Color {
-                r: 0.8,
-                g: 0.8,
-                b: 0.8,
-            },
-            reflectivity: 0.0,
-            eta: 0.0,
-            absorption: Color::black(),
-        },
-        Entity {
-            shape: Box::new(Circle {
-                cx: 0.7,
+            shape: Box::new(UnionShape::new(Box::new(Circle {
+                cx: 0.4,
                 cy: 0.5,
-                r: 0.1,
-            }),
+                r: 0.2,
+            }), Box::new(Circle {
+                cx: 0.6,
+                cy: 0.5,
+                r: 0.2,
+            }))),
             emissive: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
             },
             reflectivity: 0.0,
             eta: 0.0,
