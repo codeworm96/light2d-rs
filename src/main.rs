@@ -10,7 +10,7 @@ use rayon::prelude::*;
 
 const W: u32 = 512;
 const H: u32 = 512;
-const N: u32 = 256;
+const N: u32 = 64;
 const BIAS: f64 = 1e-4;
 const MAX_DEPTH: u32 = 3;
 
@@ -84,6 +84,53 @@ struct Intersection {
 trait Shape {
     fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<Intersection>;
     fn is_inside(&self, p: (f64, f64)) -> bool;
+}
+
+struct Circle {
+    cx: f64,
+    cy: f64,
+    r: f64,
+}
+
+impl Shape for Circle {
+    fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<Intersection> {
+        let a = d.0 * d.0 + d.1 * d.1;
+        let ocx = p.0 - self.cx;
+        let ocy = p.1 - self.cy;
+        let b = 2.0 * (ocx * d.0 + ocy * d.1);
+        let c = ocx * ocx + ocy * ocy - self.r * self.r;
+        let delta = b * b - 4.0 * a * c;
+        if delta < 0.0 {
+            None
+        } else {
+            let t1 = (-b - delta.sqrt()) / (2.0 * a);
+            let t2 = (-b + delta.sqrt()) / (2.0 * a);
+            let t = if t1 <= 0.0 {
+                t2
+            } else {
+                t1
+            };
+            if t > 0.0 {
+                let x = p.0 + d.0 * t;
+                let y = p.1 + d.1 * t;
+                let nx = x - self.cx;
+                let ny = y - self.cy;
+                let len = (nx * nx + ny * ny).sqrt();
+                Some(Intersection {
+                    point: (x, y),
+                    normal: (nx / len, ny / len),
+                })
+            } else {
+                None
+            }
+        }
+    }
+
+    fn is_inside(&self, p: (f64, f64)) -> bool {
+        let x = p.0 - self.cx;
+        let y = p.1 - self.cy;
+        x * x + y * y < self.r * self.r
+    }
 }
 
 struct EntityIntersection {
@@ -190,7 +237,7 @@ fn beer_lambert(a: Color, d: f64) -> Color {
 
 fn trace(scene: &Scene, ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
     if let Some(r) = scene.intersect((ox, oy), (dx, dy)) {
-        let sign = if r.normal.0 * dx + r.normal.1 * dy > 0.0 {
+        let sign = if r.normal.0 * dx + r.normal.1 * dy < 0.0 {
             1.0
         } else {
             -1.0
@@ -250,7 +297,51 @@ fn main() {
     let mut img = ImageBuffer::from_pixel(W, H, Rgb([0u8, 0u8, 0u8]));
     let mut rng = rand::thread_rng();
     let scene = Scene {
-        entities: vec![],
+        entities: vec![Entity {
+            shape: Box::new(Circle {
+                cx: 0.3,
+                cy: 0.3,
+                r: 0.1,
+            }),
+            emissive: Color {
+                r: 2.0,
+                g: 2.0,
+                b: 2.0,
+            },
+            reflectivity: 0.0,
+            eta: 0.0,
+            absorption: Color::black(),
+        },
+        Entity {
+            shape: Box::new(Circle {
+                cx: 0.3,
+                cy: 0.7,
+                r: 0.05,
+            }),
+            emissive: Color {
+                r: 0.8,
+                g: 0.8,
+                b: 0.8,
+            },
+            reflectivity: 0.0,
+            eta: 0.0,
+            absorption: Color::black(),
+        },
+        Entity {
+            shape: Box::new(Circle {
+                cx: 0.7,
+                cy: 0.5,
+                r: 0.1,
+            }),
+            emissive: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+            },
+            reflectivity: 0.0,
+            eta: 0.0,
+            absorption: Color::black(),
+        }],
     };
     for x in 0..W {
         for y in 0..H {
