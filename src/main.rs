@@ -12,6 +12,7 @@ const W: u32 = 512;
 const H: u32 = 512;
 const N: u32 = 64;
 const BIAS: f64 = 1e-4;
+const EPSILON: f64 = 1e-6;
 const MAX_DEPTH: u32 = 3;
 
 #[derive(Clone, Copy)]
@@ -130,6 +131,37 @@ impl Shape for Circle {
         let x = p.0 - self.cx;
         let y = p.1 - self.cy;
         x * x + y * y < self.r * self.r
+    }
+}
+
+struct Plane {
+    px: f64,
+    py: f64,
+    nx: f64,
+    ny: f64,
+}
+
+impl Shape for Plane {
+    fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<Intersection> {
+        let a = d.0 * self.nx + d.1 * self.ny;
+        if a.abs() < EPSILON {
+            None
+        } else {
+            let b = (self.px - p.0) * self.nx + (self.py - p.1) * self.ny;
+            let t = b / a;
+            if t > 0.0 {
+                Some(Intersection {
+                    point: (p.0 + d.0 * t, p.1 + d.1 * t),
+                    normal: (self.nx, self.ny),
+                })
+            } else {
+                None
+            }
+        }
+    }
+
+    fn is_inside(&self, p: (f64, f64)) -> bool {
+        (p.0 - self.px) * self.nx + (p.1 - self.py) * self.ny < 0.0
     }
 }
 
@@ -391,12 +423,13 @@ fn main() {
     let mut rng = rand::thread_rng();
     let scene = Scene {
         entities: vec![Entity {
-            shape: Box::new(IntersectShape::new(Box::new(Circle {
-                cx: 0.4,
-                cy: 0.5,
-                r: 0.2,
+            shape: Box::new(IntersectShape::new(Box::new(Plane {
+                px: 0.5,
+                py: 0.5,
+                nx: 0.0,
+                ny: 1.0,
             }), Box::new(Circle {
-                cx: 0.6,
+                cx: 0.5,
                 cy: 0.5,
                 r: 0.2,
             }))),
