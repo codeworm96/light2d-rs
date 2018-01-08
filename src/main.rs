@@ -179,6 +179,13 @@ impl Polygon {
             panic!("Too few points!");
         }
     }
+
+    fn rectangle(cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> Polygon {
+        Polygon::new([(sx, sy), (-sx, sy), (-sx, -sy), (sx, -sy)].iter()
+            .map(|&(x, y)| (x * theta.cos() - y * theta.sin(), x * theta.sin() + y * theta.cos()))
+            .map(|(x, y)| (x + cx, y + cy))
+            .collect())
+    }
 }
 
 impl Shape for Polygon {
@@ -507,9 +514,7 @@ fn main() {
     let mut rng = rand::thread_rng();
     let scene = Scene {
         entities: vec![Entity {
-            shape: Box::new(Polygon::new(
-                vec![(0.5, 0.2), (0.3, 0.6), (0.8, 0.8)]
-            )),
+            shape: Box::new(Polygon::rectangle(0.5, 0.5, 2.0 * PI / 16.0, 0.3, 0.1)),
             emissive: Color {
                 r: 1.0,
                 g: 1.0,
@@ -517,11 +522,7 @@ fn main() {
             },
             reflectivity: 0.0,
             eta: 0.0,
-            absorption: Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
-            },
+            absorption: Color::black(),
         }],
     };
     for x in 0..W {
