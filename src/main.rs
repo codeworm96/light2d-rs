@@ -165,6 +165,90 @@ impl Shape for Plane {
     }
 }
 
+struct Polygon {
+    points: Vec<(f64, f64)>, // counterclockwise
+}
+
+impl Polygon {
+    fn new(p: Vec<(f64, f64)>) -> Polygon {
+        if p.len() > 1 {
+            Polygon {
+                points: p,
+            }
+        } else {
+            panic!("Too few points!");
+        }
+    }
+}
+
+impl Shape for Polygon {
+    fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<Intersection> {
+        let mut res: Option<Intersection> = None;
+        for i in 0..self.points.len() {
+            let a = self.points[i];
+            let b = if i + 1 == self.points.len() {
+                self.points[0]
+            } else {
+                self.points[i + 1]
+            };
+            let ax = a.0 - p.0;
+            let ay = a.1 - p.1;
+            let bx = b.0 - p.0;
+            let by = b.1 - p.1;
+            let product1 = ax * d.1 - d.0 * ay;
+            let product2 = bx * d.1 - d.0 * by;
+            if product1 * product2 < 0.0 {
+                let nx = a.1 - b.1;
+                let ny = b.0 - a.0;
+                let len = (nx * nx + ny * ny).sqrt();
+                let nx = nx / len;
+                let ny = ny / len;
+                let c1 = d.0 * nx + d.1 * ny;
+                if c1.abs() >= EPSILON {
+                    let c2 = (a.0 - p.0) * nx + (a.1 - p.1) * ny;
+                    let t = c2 / c1;
+                    if t > 0.0 {
+                        let intersect = Intersection {
+                            point: (p.0 + d.0 * t, p.1 + d.1 * t),
+                            normal: (nx, ny),
+                        };
+                        res = match res {
+                            Some(i) => {
+                                if distance(p, intersect.point) < distance(p, i.point) {
+                                    Some(intersect)
+                                } else {
+                                    Some(i)
+                                }
+                            }
+                            None => Some(intersect),
+                        }
+                    }
+                }
+            }
+        }
+        res
+    }
+
+    fn is_inside(&self, p: (f64, f64)) -> bool {
+        for i in 0..self.points.len() {
+            let a = self.points[i];
+            let b = if i + 1 == self.points.len() {
+                self.points[0]
+            } else {
+                self.points[i + 1]
+            };
+            let ax = b.0 - a.0;
+            let ay = b.1 - a.1;
+            let bx = p.0 - a.0;
+            let by = p.1 - a.1;
+            if ax * by - bx * ay <= 0.0 {
+                return false;
+            }
+        }
+        true
+    }
+}
+
 struct UnionShape {
     a: Box<Shape + Sync>,
     b: Box<Shape + Sync>,
@@ -423,16 +507,9 @@ fn main() {
     let mut rng = rand::thread_rng();
     let scene = Scene {
         entities: vec![Entity {
-            shape: Box::new(IntersectShape::new(Box::new(Plane {
-                px: 0.5,
-                py: 0.5,
-                nx: 0.0,
-                ny: 1.0,
-            }), Box::new(Circle {
-                cx: 0.5,
-                cy: 0.5,
-                r: 0.2,
-            }))),
+            shape: Box::new(Polygon::new(
+                vec![(0.5, 0.2), (0.3, 0.6), (0.8, 0.8)]
+            )),
             emissive: Color {
                 r: 1.0,
                 g: 1.0,
@@ -440,7 +517,11 @@ fn main() {
             },
             reflectivity: 0.0,
             eta: 0.0,
-            absorption: Color::black(),
+            absorption: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+            },
         }],
     };
     for x in 0..W {
