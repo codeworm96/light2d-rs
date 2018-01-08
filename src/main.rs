@@ -169,6 +169,63 @@ impl UnionShape {
     }
 }
 
+struct IntersectShape {
+    a: Box<Shape + Sync>,
+    b: Box<Shape + Sync>,
+}
+
+impl Shape for IntersectShape {
+    fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<Intersection> {
+        match (self.a.intersect(p, d), self.b.intersect(p, d)) {
+            (Some(i1), Some(i2)) => {
+                if self.a.is_inside(i2.point) && self.b.is_inside(i1.point) {
+                    let d1 = distance(p, i1.point);
+                    let d2 = distance(p, i2.point);
+                    if d1 < d2 {
+                        Some(i1)
+                    } else {
+                        Some(i2)
+                    }
+                } else if self.a.is_inside(i2.point) {
+                    Some(i2)
+                } else if self.b.is_inside(i1.point) {
+                    Some(i1)
+                } else {
+                    None
+                }
+            }
+            (None, Some(i2)) => {
+                if self.a.is_inside(i2.point) {
+                    Some(i2)
+                } else {
+                    None
+                }
+            }
+            (Some(i1), None) => {
+                if self.b.is_inside(i1.point) {
+                    Some(i1)
+                } else {
+                    None
+                }
+            }
+            (None, None) => None,
+        }
+    }
+
+    fn is_inside(&self, p: (f64, f64)) -> bool {
+        self.a.is_inside(p) && self.b.is_inside(p)
+    }
+}
+
+impl IntersectShape {
+    fn new(a: Box<Shape + Sync>, b: Box<Shape + Sync>) -> IntersectShape {
+        IntersectShape {
+            a: a,
+            b: b,
+        }
+    }
+}
+
 struct EntityIntersection {
     point: (f64, f64),
     normal: (f64, f64),
@@ -334,7 +391,7 @@ fn main() {
     let mut rng = rand::thread_rng();
     let scene = Scene {
         entities: vec![Entity {
-            shape: Box::new(UnionShape::new(Box::new(Circle {
+            shape: Box::new(IntersectShape::new(Box::new(Circle {
                 cx: 0.4,
                 cy: 0.5,
                 r: 0.2,
