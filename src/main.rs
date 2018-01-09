@@ -75,7 +75,7 @@ impl std::iter::Sum for Color {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Intersection {
     point: (f64, f64),
     normal: (f64, f64),
@@ -180,7 +180,7 @@ impl Polygon {
     }
 
     fn rectangle(cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> Self {
-        Self::new([(sx, sy), (-sx, sy), (-sx, -sy), (sx, -sy)].iter()
+        Self::new([(sx, -sy), (-sx, -sy), (-sx, sy), (sx, sy)].iter()
             .map(|&(x, y)| (x * theta.cos() - y * theta.sin(), x * theta.sin() + y * theta.cos()))
             .map(|(x, y)| (x + cx, y + cy))
             .collect())
@@ -247,7 +247,7 @@ impl Shape for Polygon {
             let ay = b.1 - a.1;
             let bx = p.0 - a.0;
             let by = p.1 - a.1;
-            if ax * by - bx * ay <= 0.0 {
+            if ax * by - bx * ay >= 0.0 {
                 return false;
             }
         }
@@ -514,31 +514,24 @@ fn main() {
     let scene = Scene {
         entities: vec![Entity {
             shape: Box::new(Circle {
-                cx: 0.4,
-                cy: 0.2,
+                cx: -0.2,
+                cy: -0.2,
                 r: 0.1,
             }),
             emissive: Color {
-                r: 2.0,
-                g: 2.0,
-                b: 2.0,
+                r: 10.0,
+                g: 10.0,
+                b: 10.0,
             },
             reflectivity: 0.0,
             eta: 0.0,
             absorption: Color::black(),
         },
         Entity {
-            shape: Box::new(Polygon::rectangle(0.5, 0.8, 2.0 * PI / 16.0, 0.1, 0.1)),
+            shape: Box::new(Polygon::rectangle(0.5, 0.5, 0.0, 0.3, 0.2)),
             emissive: Color::black(),
-            reflectivity: 0.9,
-            eta: 0.0,
-            absorption: Color::black(),
-        },
-        Entity {
-            shape: Box::new(Polygon::rectangle(0.8, 0.5, 2.0 * PI / 16.0, 0.1, 0.1)),
-            emissive: Color::black(),
-            reflectivity: 0.9,
-            eta: 0.0,
+            reflectivity: 0.2,
+            eta: 1.5,
             absorption: Color::black(),
         }],
     };
