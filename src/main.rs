@@ -185,6 +185,13 @@ impl Polygon {
             .map(|(x, y)| (x + cx, y + cy))
             .collect())
     }
+
+    fn ngon(cx: f64, cy: f64, r: f64, n: u32) -> Self {
+        Self::new((0..n).map(|i| i as f64 * 2.0 * PI / n as f64)
+            .map(|theta| (r * theta.cos(), r * theta.sin()))
+            .map(|(x, y)| (cx + x, cy - y))
+            .collect())
+    }
 }
 
 impl Shape for Polygon {
@@ -514,7 +521,7 @@ fn main() {
     let scene = Scene {
         entities: vec![Entity {
             shape: Box::new(Circle {
-                cx: -0.2,
+                cx: 0.5,
                 cy: -0.2,
                 r: 0.1,
             }),
@@ -528,14 +535,14 @@ fn main() {
             absorption: Color::black(),
         },
         Entity {
-            shape: Box::new(Polygon::rectangle(0.5, 0.5, 0.0, 0.3, 0.2)),
+            shape: Box::new(Polygon::ngon(0.5, 0.5, 0.25, 5)),
             emissive: Color::black(),
-            reflectivity: 0.2,
+            reflectivity: 0.0,
             eta: 1.5,
             absorption: Color {
                 r: 4.0,
                 g: 4.0,
-                b: 4.0,
+                b: 1.0,
             },
         }],
     };
