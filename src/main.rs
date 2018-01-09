@@ -514,21 +514,29 @@ fn main() {
     let scene = Scene {
         entities: vec![Entity {
             shape: Box::new(Circle {
-                cx: -0.2,
-                cy: -0.2,
-                r: 0.1,
+                cx: 0.5,
+                cy: -0.5,
+                r: 0.05,
             }),
             emissive: Color {
-                r: 10.0,
-                g: 10.0,
-                b: 10.0,
+                r: 20.0,
+                g: 20.0,
+                b: 20.0,
             },
             reflectivity: 0.0,
             eta: 0.0,
             absorption: Color::black(),
         },
         Entity {
-            shape: Box::new(Polygon::rectangle(0.5, 0.5, 0.0, 0.3, 0.2)),
+            shape: Box::new(IntersectShape::new(Box::new(Circle {
+                cx: 0.5,
+                cy: 0.2,
+                r: 0.35,
+            }), Box::new(Circle {
+                cx: 0.5,
+                cy: 0.8,
+                r: 0.35,
+            }))),
             emissive: Color::black(),
             reflectivity: 0.2,
             eta: 1.5,
