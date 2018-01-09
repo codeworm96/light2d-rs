@@ -530,12 +530,13 @@ fn main() {
         Entity {
             shape: Box::new(IntersectShape::new(Box::new(Circle {
                 cx: 0.5,
-                cy: 0.2,
-                r: 0.35,
-            }), Box::new(Circle {
-                cx: 0.5,
-                cy: 0.8,
-                r: 0.35,
+                cy: 0.5,
+                r: 0.2,
+            }), Box::new(Plane {
+                px: 0.5,
+                py: 0.5,
+                nx: 0.0,
+                ny: -1.0,
             }))),
             emissive: Color::black(),
             reflectivity: 0.2,
