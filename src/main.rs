@@ -11,7 +11,6 @@ use rayon::prelude::*;
 const W: u32 = 512;
 const H: u32 = 512;
 const N: u32 = 256;
-const BIAS: f64 = 1e-4;
 const EPSILON: f64 = 1e-6;
 const MAX_DEPTH: u32 = 3;
 
@@ -106,12 +105,12 @@ impl Shape for Circle {
         } else {
             let t1 = (-b - delta.sqrt()) / (2.0 * a);
             let t2 = (-b + delta.sqrt()) / (2.0 * a);
-            let t = if t1 <= 0.0 {
-                t2
-            } else {
+            let t = if t1 > EPSILON {
                 t1
+            } else {
+                t2
             };
-            if t > 0.0 {
+            if t > EPSILON {
                 let x = p.0 + d.0 * t;
                 let y = p.1 + d.1 * t;
                 let nx = x - self.cx;
@@ -149,7 +148,7 @@ impl Shape for Plane {
         } else {
             let b = (self.px - p.0) * self.nx + (self.py - p.1) * self.ny;
             let t = b / a;
-            if t > 0.0 {
+            if t > EPSILON {
                 Some(Intersection {
                     point: (p.0 + d.0 * t, p.1 + d.1 * t),
                     normal: (self.nx, self.ny),
@@ -211,10 +210,10 @@ impl Shape for Polygon {
                 let nx = nx / len;
                 let ny = ny / len;
                 let c1 = d.0 * nx + d.1 * ny;
-                if c1.abs() >= EPSILON {
+                if c1.abs() > EPSILON {
                     let c2 = (a.0 - p.0) * nx + (a.1 - p.1) * ny;
                     let t = c2 / c1;
-                    if t > 0.0 {
+                    if t > EPSILON {
                         let intersect = Intersection {
                             point: (p.0 + d.0 * t, p.1 + d.1 * t),
                             normal: (nx, ny),
@@ -479,7 +478,7 @@ fn trace(scene: &Scene, ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color
                         } else {
                             schlick(cosi, cost, 1.0, r.eta)
                         };
-                        sum = sum + trace(scene, x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1) * (1.0 - refl)
+                        sum = sum + trace(scene, x, y, rx, ry, depth + 1) * (1.0 - refl)
                     }
                     None => {
                         refl = 1.0
@@ -488,7 +487,7 @@ fn trace(scene: &Scene, ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color
             }
             if refl > 0.0 {
                 let (rx, ry) = reflect(dx, dy, nx, ny);
-                sum = sum + trace(scene, x + nx * BIAS, y + ny * BIAS, rx, ry, depth + 1) * refl;
+                sum = sum + trace(scene, x, y, rx, ry, depth + 1) * refl;
             }
         }
         if sign < 0.0 {
