@@ -1,9 +1,6 @@
-extern crate image;
-extern crate rand;
-extern crate rayon;
-
 use image::{ImageBuffer, Rgb};
 use rand::rngs::ThreadRng;
+use rand::thread_rng;
 use rand::Rng;
 use rayon::prelude::*;
 use std::cmp::min;
@@ -319,7 +316,7 @@ fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> Color {
 
 fn main() {
     let mut img = ImageBuffer::from_pixel(W, H, Rgb([0u8, 0u8, 0u8]));
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     for x in 0..W {
         for y in 0..H {
             let xx = x as f64 / W as f64;
