@@ -153,7 +153,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "light2d-rs"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "image 0.20.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",

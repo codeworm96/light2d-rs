@@ -1,9 +1,6 @@
-extern crate image;
-extern crate rand;
-extern crate rayon;
-
 use image::{ImageBuffer, Rgb};
 use rand::rngs::ThreadRng;
+use rand::thread_rng;
 use rand::Rng;
 use rayon::prelude::*;
 use std::cmp::min;
@@ -270,8 +267,8 @@ impl Shape for Polygon {
 }
 
 struct UnionShape {
-    a: Box<Shape + Sync>,
-    b: Box<Shape + Sync>,
+    a: Box<dyn Shape + Sync>,
+    b: Box<dyn Shape + Sync>,
 }
 
 impl Shape for UnionShape {
@@ -297,14 +294,14 @@ impl Shape for UnionShape {
 }
 
 impl UnionShape {
-    fn new(a: Box<Shape + Sync>, b: Box<Shape + Sync>) -> UnionShape {
+    fn new(a: Box<dyn Shape + Sync>, b: Box<dyn Shape + Sync>) -> UnionShape {
         UnionShape { a: a, b: b }
     }
 }
 
 struct IntersectShape {
-    a: Box<Shape + Sync>,
-    b: Box<Shape + Sync>,
+    a: Box<dyn Shape + Sync>,
+    b: Box<dyn Shape + Sync>,
 }
 
 impl Shape for IntersectShape {
@@ -351,7 +348,7 @@ impl Shape for IntersectShape {
 }
 
 impl IntersectShape {
-    fn new(a: Box<Shape + Sync>, b: Box<Shape + Sync>) -> IntersectShape {
+    fn new(a: Box<dyn Shape + Sync>, b: Box<dyn Shape + Sync>) -> IntersectShape {
         IntersectShape { a: a, b: b }
     }
 }
@@ -366,7 +363,7 @@ struct EntityIntersection {
 }
 
 struct Entity {
-    shape: Box<Shape + Sync>,
+    shape: Box<dyn Shape + Sync>,
     emissive: Color,
     reflectivity: f64,
     eta: f64,
@@ -511,7 +508,7 @@ fn sample(scene: &Scene, rng: &mut ThreadRng, x: f64, y: f64) -> Color {
 
 fn main() {
     let mut img = ImageBuffer::from_pixel(W, H, Rgb([0u8, 0u8, 0u8]));
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     let scene = Scene {
         entities: vec![
             Entity {
