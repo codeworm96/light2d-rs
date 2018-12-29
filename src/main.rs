@@ -2,11 +2,12 @@ extern crate image;
 extern crate rand;
 extern crate rayon;
 
-use std::f64::consts::PI;
-use std::cmp::min;
 use image::{ImageBuffer, Rgb};
-use rand::{Rng, ThreadRng};
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use rayon::prelude::*;
+use std::cmp::min;
+use std::f64::consts::PI;
 
 const W: u32 = 512;
 const H: u32 = 512;
@@ -69,7 +70,8 @@ impl std::ops::Mul<f64> for Color {
 
 impl std::iter::Sum for Color {
     fn sum<I>(iter: I) -> Color
-        where I: Iterator<Item = Color>
+    where
+        I: Iterator<Item = Color>,
     {
         iter.fold(Color::black(), std::ops::Add::add)
     }
@@ -105,11 +107,7 @@ impl Shape for Circle {
         } else {
             let t1 = (-b - delta.sqrt()) / (2.0 * a);
             let t2 = (-b + delta.sqrt()) / (2.0 * a);
-            let t = if t1 > EPSILON {
-                t1
-            } else {
-                t2
-            };
+            let t = if t1 > EPSILON { t1 } else { t2 };
             if t > EPSILON {
                 let x = p.0 + d.0 * t;
                 let y = p.1 + d.1 * t;
@@ -171,26 +169,35 @@ struct Polygon {
 impl Polygon {
     fn new(p: Vec<(f64, f64)>) -> Self {
         if p.len() > 1 {
-            Self {
-                points: p,
-            }
+            Self { points: p }
         } else {
             panic!("Too few points!");
         }
     }
 
     fn rectangle(cx: f64, cy: f64, theta: f64, sx: f64, sy: f64) -> Self {
-        Self::new([(sx, -sy), (-sx, -sy), (-sx, sy), (sx, sy)].iter()
-            .map(|&(x, y)| (x * theta.cos() - y * theta.sin(), x * theta.sin() + y * theta.cos()))
-            .map(|(x, y)| (x + cx, y + cy))
-            .collect())
+        Self::new(
+            [(sx, -sy), (-sx, -sy), (-sx, sy), (sx, sy)]
+                .iter()
+                .map(|&(x, y)| {
+                    (
+                        x * theta.cos() - y * theta.sin(),
+                        x * theta.sin() + y * theta.cos(),
+                    )
+                })
+                .map(|(x, y)| (x + cx, y + cy))
+                .collect(),
+        )
     }
 
     fn ngon(cx: f64, cy: f64, r: f64, n: u32) -> Self {
-        Self::new((0..n).map(|i| i as f64 * 2.0 * PI / n as f64)
-            .map(|theta| (r * theta.cos(), r * theta.sin()))
-            .map(|(x, y)| (cx + x, cy - y))
-            .collect())
+        Self::new(
+            (0..n)
+                .map(|i| i as f64 * 2.0 * PI / n as f64)
+                .map(|theta| (r * theta.cos(), r * theta.sin()))
+                .map(|(x, y)| (cx + x, cy - y))
+                .collect(),
+        )
     }
 }
 
@@ -291,10 +298,7 @@ impl Shape for UnionShape {
 
 impl UnionShape {
     fn new(a: Box<Shape + Sync>, b: Box<Shape + Sync>) -> UnionShape {
-        UnionShape {
-            a: a,
-            b: b,
-        }
+        UnionShape { a: a, b: b }
     }
 }
 
@@ -348,10 +352,7 @@ impl Shape for IntersectShape {
 
 impl IntersectShape {
     fn new(a: Box<Shape + Sync>, b: Box<Shape + Sync>) -> IntersectShape {
-        IntersectShape {
-            a: a,
-            b: b,
-        }
+        IntersectShape { a: a, b: b }
     }
 }
 
@@ -374,14 +375,16 @@ struct Entity {
 
 impl Entity {
     fn intersect(&self, p: (f64, f64), d: (f64, f64)) -> Option<EntityIntersection> {
-        self.shape.intersect(p, d).map(|intersection| EntityIntersection {
-            point: intersection.point,
-            normal: intersection.normal,
-            emissive: self.emissive.clone(),
-            reflectivity: self.reflectivity,
-            eta: self.eta,
-            absorption: self.absorption,
-        })
+        self.shape
+            .intersect(p, d)
+            .map(|intersection| EntityIntersection {
+                point: intersection.point,
+                normal: intersection.normal,
+                emissive: self.emissive.clone(),
+                reflectivity: self.reflectivity,
+                eta: self.eta,
+                absorption: self.absorption,
+            })
     }
 }
 
@@ -440,11 +443,7 @@ fn fresnel(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
 fn schlick(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
     let r0 = (etai - etat) / (etai + etat);
     let r0 = r0 * r0;
-    let a = if etai < etat {
-        1.0 - cosi
-    } else {
-        1.0 - cost
-    };
+    let a = if etai < etat { 1.0 - cosi } else { 1.0 - cost };
     let aa = a * a;
     r0 + (1.0 - r0) * aa * aa * a
 }
@@ -471,11 +470,7 @@ fn trace(scene: &Scene, ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color
             let nx = r.normal.0 * sign;
             let ny = r.normal.1 * sign;
             if r.eta > 0.0 {
-                let eta = if sign < 0.0 {
-                    r.eta
-                } else {
-                    1.0 / r.eta
-                };
+                let eta = if sign < 0.0 { r.eta } else { 1.0 / r.eta };
                 match refract(dx, dy, nx, ny, eta) {
                     Some((rx, ry)) => {
                         let cosi = -(dx * nx + dy * ny);
@@ -487,9 +482,7 @@ fn trace(scene: &Scene, ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color
                         };
                         sum = sum + trace(scene, x, y, rx, ry, depth + 1) * (1.0 - refl)
                     }
-                    None => {
-                        refl = 1.0
-                    }
+                    None => refl = 1.0,
                 }
             }
             if refl > 0.0 {
@@ -507,7 +500,8 @@ fn trace(scene: &Scene, ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color
 }
 
 fn sample(scene: &Scene, rng: &mut ThreadRng, x: f64, y: f64) -> Color {
-    let sum: Color = (0..N).map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
+    let sum: Color = (0..N)
+        .map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
         .collect::<Vec<f64>>()
         .par_iter()
         .map(|a| trace(scene, x, y, a.cos(), a.sin(), 0))
@@ -519,32 +513,34 @@ fn main() {
     let mut img = ImageBuffer::from_pixel(W, H, Rgb([0u8, 0u8, 0u8]));
     let mut rng = rand::thread_rng();
     let scene = Scene {
-        entities: vec![Entity {
-            shape: Box::new(Circle {
-                cx: 0.5,
-                cy: -0.2,
-                r: 0.1,
-            }),
-            emissive: Color {
-                r: 10.0,
-                g: 10.0,
-                b: 10.0,
+        entities: vec![
+            Entity {
+                shape: Box::new(Circle {
+                    cx: 0.5,
+                    cy: -0.2,
+                    r: 0.1,
+                }),
+                emissive: Color {
+                    r: 10.0,
+                    g: 10.0,
+                    b: 10.0,
+                },
+                reflectivity: 0.0,
+                eta: 0.0,
+                absorption: Color::black(),
             },
-            reflectivity: 0.0,
-            eta: 0.0,
-            absorption: Color::black(),
-        },
-        Entity {
-            shape: Box::new(Polygon::ngon(0.5, 0.5, 0.25, 5)),
-            emissive: Color::black(),
-            reflectivity: 0.0,
-            eta: 1.5,
-            absorption: Color {
-                r: 4.0,
-                g: 4.0,
-                b: 1.0,
+            Entity {
+                shape: Box::new(Polygon::ngon(0.5, 0.5, 0.25, 5)),
+                emissive: Color::black(),
+                reflectivity: 0.0,
+                eta: 1.5,
+                absorption: Color {
+                    r: 4.0,
+                    g: 4.0,
+                    b: 1.0,
+                },
             },
-        }],
+        ],
     };
     for x in 0..W {
         for y in 0..H {
