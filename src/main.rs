@@ -2,11 +2,12 @@ extern crate image;
 extern crate rand;
 extern crate rayon;
 
-use std::f64::consts::PI;
-use std::cmp::min;
 use image::{ImageBuffer, Rgb};
-use rand::{Rng, ThreadRng};
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use rayon::prelude::*;
+use std::cmp::min;
+use std::f64::consts::PI;
 
 const W: u32 = 512;
 const H: u32 = 512;
@@ -71,7 +72,8 @@ impl std::ops::Mul<f64> for Color {
 
 impl std::iter::Sum for Color {
     fn sum<I>(iter: I) -> Color
-        where I: Iterator<Item = Color>
+    where
+        I: Iterator<Item = Color>,
     {
         iter.fold(Color::black(), std::ops::Add::add)
     }
@@ -102,12 +104,8 @@ impl std::ops::Sub<Res> for Res {
 
     fn sub(self, rhs: Res) -> Res {
         Res {
-            sd: if self.sd > -rhs.sd {
-                self.sd
-            } else {
-                -rhs.sd
-            },
-            .. self
+            sd: if self.sd > -rhs.sd { self.sd } else { -rhs.sd },
+            ..self
         }
     }
 }
@@ -124,9 +122,8 @@ impl std::ops::Mul<Res> for Res {
     }
 }
 
-
 fn scene(x: f64, y: f64) -> Res {
-    let a = Res { 
+    let a = Res {
         sd: circle_sdf(x, y, 0.5, -0.2, 0.1),
         emissive: Color {
             r: 10.0,
@@ -166,7 +163,9 @@ fn segment_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64) -> f64 {
     let vy = y - ay;
     let ux = bx - ax;
     let uy = by - ay;
-    let t = ((vx * ux + vy * uy) / (ux * ux + uy * uy)).min(1.0).max(0.0);
+    let t = ((vx * ux + vy * uy) / (ux * ux + uy * uy))
+        .min(1.0)
+        .max(0.0);
     let dx = vx - ux * t;
     let dy = vy - uy * t;
     (dx * dx + dy * dy).sqrt()
@@ -190,9 +189,10 @@ fn triangle_sdf(x: f64, y: f64, ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy:
     let d = segment_sdf(x, y, ax, ay, bx, by)
         .min(segment_sdf(x, y, bx, by, cx, cy))
         .min(segment_sdf(x, y, cx, cy, ax, ay));
-    if (bx - ax) * (y - ay) > (by - ay) * (x - ax) &&
-        (cx - bx) * (y - by) > (cy - by) * (x - bx) &&
-        (ax - cx) * (y - cy) > (ay - cy) * (x - cx) {
+    if (bx - ax) * (y - ay) > (by - ay) * (x - ax)
+        && (cx - bx) * (y - by) > (cy - by) * (x - bx)
+        && (ax - cx) * (y - cy) > (ay - cy) * (x - cx)
+    {
         -d
     } else {
         d
@@ -205,7 +205,14 @@ fn ngon_sdf(x: f64, y: f64, cx: f64, cy: f64, r: f64, n: f64) -> f64 {
     let a = 2.0 * PI / n;
     let t = (uy.atan2(ux) + 2.0 * PI) % a;
     let s = (ux * ux + uy * uy).sqrt();
-    plane_sdf(s * t.cos(), s * t.sin(), r, 0.0, (a * 0.5).cos(), (a * 0.5).sin())
+    plane_sdf(
+        s * t.cos(),
+        s * t.sin(),
+        r,
+        0.0,
+        (a * 0.5).cos(),
+        (a * 0.5).sin(),
+    )
 }
 
 fn reflect(ix: f64, iy: f64, nx: f64, ny: f64) -> (f64, f64) {
@@ -238,11 +245,7 @@ fn fresnel(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
 fn schlick(cosi: f64, cost: f64, etai: f64, etat: f64) -> f64 {
     let r0 = (etai - etat) / (etai + etat);
     let r0 = r0 * r0;
-    let a = if etai < etat {
-        1.0 - cosi
-    } else {
-        1.0 - cost
-    };
+    let a = if etai < etat { 1.0 - cosi } else { 1.0 - cost };
     let aa = a * a;
     r0 + (1.0 - r0) * aa * aa * a
 }
@@ -257,11 +260,7 @@ fn beer_lambert(a: Color, d: f64) -> Color {
 
 fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
     let mut t = 0.0;
-    let sign = if scene(ox, oy).sd > 0.0 {
-        1.0
-    } else {
-        -1.0
-    };
+    let sign = if scene(ox, oy).sd > 0.0 { 1.0 } else { -1.0 };
     let mut i = 0;
     while i < MAX_STEP && t < MAX_DISTANCE {
         let x = ox + dx * t;
@@ -275,11 +274,7 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
                 nx *= sign;
                 ny *= sign;
                 if r.eta > 0.0 {
-                    let eta = if sign < 0.0 {
-                        r.eta
-                    } else {
-                        1.0 / r.eta
-                    };
+                    let eta = if sign < 0.0 { r.eta } else { 1.0 / r.eta };
                     match refract(dx, dy, nx, ny, eta) {
                         Some((rx, ry)) => {
                             let cosi = -(dx * nx + dy * ny);
@@ -289,11 +284,11 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
                             } else {
                                 schlick(cosi, cost, 1.0, r.eta)
                             };
-                            sum = sum + trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1) * (1.0 - refl)
+                            sum = sum
+                                + trace(x - nx * BIAS, y - ny * BIAS, rx, ry, depth + 1)
+                                    * (1.0 - refl)
                         }
-                        None => {
-                            refl = 1.0
-                        }
+                        None => refl = 1.0,
                     }
                 }
                 if refl > 0.0 {
@@ -313,7 +308,8 @@ fn trace(ox: f64, oy: f64, dx: f64, dy: f64, depth: u32) -> Color {
 }
 
 fn sample(rng: &mut ThreadRng, x: f64, y: f64) -> Color {
-    let sum: Color = (0..N).map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
+    let sum: Color = (0..N)
+        .map(|i| 2.0 * PI * (i as f64 + rng.gen_range(0.0, 1.0)) / N as f64)
         .collect::<Vec<f64>>()
         .par_iter()
         .map(|a| trace(x, y, a.cos(), a.sin(), 0))
